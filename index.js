@@ -9,6 +9,8 @@ if (!apiKey) {
   process.exit(1)
 }
 
+const port = process.env.PORT || 3000
+
 // in-memory cache for returned weather data (60s TTL) so we dont hammer the openweather endpoint for the same city every second if user has gone crazy.
 
 const cache = new Map()
@@ -131,8 +133,8 @@ process.on('SIGINT', () => shutdown('SIGINT'))
 // Start server
 const start = async () => {
   try {
-    await fastify.listen({ port: 3000, host: '0.0.0.0' })
-  } catch (err) {
+    await fastify.listen({ port, host: '0.0.0.0' })
+    fastify.log.info(`Server running on port ${port}`)
     fastify.log.error(err)
     process.exit(1)
   }
