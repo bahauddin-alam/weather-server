@@ -134,6 +134,7 @@ process.on('SIGINT', () => shutdown('SIGINT'))
 const start = async () => {
   try {
     await fastify.listen({ port, host: '0.0.0.0' })
+    fastify.log.info(`Server running on port ${port}`)
     fastify.log.error(err)
     process.exit(1)
   }
