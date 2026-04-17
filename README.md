@@ -76,13 +76,13 @@ Response
 ### Get Weather
 
 ```
-GET api/weather?city=<city-name>
+GET /api/weather?city=<city-name>
 ```
 
 Example
 
 ```
-GET api/weather?city=Delhi
+GET /api/weather?city=Delhi
 ```
 
 Example Response
