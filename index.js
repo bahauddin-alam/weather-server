@@ -37,7 +37,7 @@ fastify.get('/health', async () => ({ status: 'ok' }))
 
 // Route 1 - /weather - to fetch the weather from openweather
 
-fastify.get('api/weather', async function (request, reply) {
+fastify.get('/api/weather', async function (request, reply) {
   const city = request.query.city
 
   if (!city) {
