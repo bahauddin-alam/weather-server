@@ -1,6 +1,12 @@
-require("dotenv").config(); // Loads variables from .env instead of hard coding it in the code itself
-const { DateTime } = require("luxon"); // Timezone + formatting
-const fastify = require("fastify")({ logger: true }); // fastify has inbuilt logging we are using that.
+require("dotenv").config();
+const { DateTime } = require("luxon");
+const fastify = require("fastify")({ logger: true });
+
+// Allow the frontend (served from a different origin/port, e.g. Live Server on 5501)
+// to read responses from this API (running on port 3000).
+fastify.register(require("@fastify/cors"), {
+  origin: true, // reflects the request's Origin header — fine for local dev
+});
 
 // Env validation
 const apiKey = process.env.OPENWEATHER_API_KEY;
