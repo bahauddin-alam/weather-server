@@ -35,7 +35,7 @@ jobs:
           script: |
             set -e
 
-            cd /home/x/mrb-dev-projects/weather-server
+            cd /home/neo/weather-server
 
             git pull origin main
 
