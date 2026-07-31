@@ -25,10 +25,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
+          host: ${{ secrets.100.112.147.4 }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           script_stop: true
