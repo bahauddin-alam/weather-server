@@ -45,6 +45,6 @@ jobs:
             echo "OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}" >> .env.tmp
             mv .env.tmp .env
 
-            sudo systemctl restart weather-server
+            pm2 restart weather-api
 
             echo "Deployment successful at $(date)"
