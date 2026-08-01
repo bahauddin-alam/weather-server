@@ -14,18 +14,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
@@ -33,40 +21,11 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      - name: Verify Tailscale
-        run: |
-          echo "== Tailscale Version =="
-          tailscale version
-
-          echo ""
-          echo "== Tailscale Status =="
-          tailscale status
-
-          echo ""
-          echo "== Tailscale IP =="
-          tailscale ip
-
-      - name: Check SSH Client
-        run: |
-          which ssh
-          ssh -V
-
-      - name: Ping Server
-        run: |
-          tailscale ping 100.112.147.4
-
-      - name: Test SSH
-        run: |
-          ssh -vvv \
-            -o StrictHostKeyChecking=no \
-            neo@100.112.147.4 \
-            "hostname"
-
-      - name: Deploy
+      - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
-          host: 100.112.147.4
-          username: neo
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           debug: true
           script: |
@@ -74,7 +33,8 @@ jobs:
 
             cd /home/neo/weather-server
 
-            git pull origin main
+            git fetch origin
+            git reset --hard origin/main
 
             npm ci --omit=dev
 
