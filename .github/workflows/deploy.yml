@@ -2,7 +2,8 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 concurrency:
   group: deploy
@@ -19,20 +20,69 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "22"
           cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
-         oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-         oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-         tags: tag:ci
-      - name: Test SSH
-        run: | 
-          ssh -vvv \ 
-           -o StrictHostKeyChecking=no \
-           neo@100.112.147.4 \
-           hostname
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
 
-          
+      - name: Verify Tailscale
+        run: |
+          echo "== Tailscale Version =="
+          tailscale version
+
+          echo ""
+          echo "== Tailscale Status =="
+          tailscale status
+
+          echo ""
+          echo "== Tailscale IP =="
+          tailscale ip
+
+      - name: Check SSH Client
+        run: |
+          which ssh
+          ssh -V
+
+      - name: Ping Server
+        run: |
+          tailscale ping 100.112.147.4
+
+      - name: Test SSH
+        run: |
+          ssh -vvv \
+            -o StrictHostKeyChecking=no \
+            neo@100.112.147.4 \
+            "hostname"
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 100.112.147.4
+          username: neo
+          key: ${{ secrets.DEPLOY_KEY }}
+          debug: true
+          script: |
+            set -e
+
+            cd /home/neo/weather-server
+
+            git pull origin main
+
+            npm ci --omit=dev
+
+            touch .env
+            grep -v '^OPENWEATHER_API_KEY=' .env > .env.tmp || true
+            echo "OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}" >> .env.tmp
+            mv .env.tmp .env
+
+            pm2 restart weather-api
+
+            echo "Deployment successful at $(date)"
