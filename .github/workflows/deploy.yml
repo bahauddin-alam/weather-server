@@ -22,22 +22,19 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
       - name: Connect to Tailscale
         uses: tailscale/github-action@v4
         with:
          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
          tags: tag:ci
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script_stop: true
+      - name: Test SSH
+        run: | 
+          ssh -vvv \ 
+           -o StrictHostKeyChecking=no \
+           neo@100.112.147.4
+           hostname
+
           script: |
             set -e
 
