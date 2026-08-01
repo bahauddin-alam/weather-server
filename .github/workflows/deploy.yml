@@ -35,19 +35,4 @@ jobs:
            neo@100.112.147.4
            hostname
 
-          script: |
-            set -e
-
-            cd /home/neo/weather-server
-
-            git pull origin main
-
-            npm ci --omit=dev
-
-            grep -v '^OPENWEATHER_API_KEY' .env > .env.tmp || true
-            echo "OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}" >> .env.tmp
-            mv .env.tmp .env
-
-            pm2 restart weather-api
-
-            echo "Deployment successful at $(date)"
+          
