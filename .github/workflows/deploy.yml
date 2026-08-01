@@ -32,7 +32,7 @@ jobs:
         run: | 
           ssh -vvv \ 
            -o StrictHostKeyChecking=no \
-           neo@100.112.147.4
+           neo@100.112.147.4 \
            hostname
 
           
