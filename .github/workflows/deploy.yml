@@ -21,28 +21,26 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          debug: true
-          script: |
-            set -e
+      - name: Deploy
+        env:
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} <<EOF
+          set -e
 
-            cd /home/neo/weather-server
+          cd /home/neo/weather-server
 
-            git fetch origin
-            git reset --hard origin/main
+          git fetch origin
+          git reset --hard origin/main
 
-            npm ci --omit=dev
+          npm ci --omit=dev
 
-            touch .env
-            grep -v '^OPENWEATHER_API_KEY=' .env > .env.tmp || true
-            echo "OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}" >> .env.tmp
-            mv .env.tmp .env
+          touch .env
+          grep -v '^OPENWEATHER_API_KEY=' .env > .env.tmp || true
+          echo "OPENWEATHER_API_KEY=$OPENWEATHER_API_KEY" >> .env.tmp
+          mv .env.tmp .env
 
-            pm2 restart weather-api
+          pm2 restart weather-api
 
-            echo "Deployment successful at $(date)"
+          echo "Deployment successful at \$(date)"
+          EOF
