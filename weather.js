@@ -1,8 +1,12 @@
 require("dotenv").config();
+const path = require("path");
 const { DateTime } = require("luxon");
 const fastify = require("fastify")({ logger: true });
 
 fastify.register(require("@fastify/cors"), { origin: true });
+fastify.register(require("@fastify/static"), {
+  root: path.join(__dirname, "public"),
+});
 
 const apiKey = process.env.OPENWEATHER_API_KEY;
 if (!apiKey) {
@@ -57,13 +61,10 @@ function buildResponse(weatherData, units, showCoords) {
   };
 }
 
-fastify.get("/", async () => ({
-  message: "Weather API is running",
-  endpoints: { health: "/health", weather: "/api/weather?city=London" },
-}));
-
+// Health check
 fastify.get("/health", async () => ({ status: "ok" }));
 
+// Weather API route
 fastify.get("/api/weather", async function (request, reply) {
   const rawCity = request.query.city;
   const city = typeof rawCity === "string" ? rawCity.trim() : "";
@@ -151,6 +152,7 @@ fastify.get("/api/weather", async function (request, reply) {
   return buildResponse(weatherData, units, showCoords);
 });
 
+// Graceful shutdown
 const shutdown = async (signal) => {
   fastify.log.info(`Received ${signal}, shutting down gracefully`);
   await fastify.close();
@@ -159,6 +161,7 @@ const shutdown = async (signal) => {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
+// Start server
 const start = async () => {
   try {
     await fastify.listen({ port, host: "0.0.0.0" });

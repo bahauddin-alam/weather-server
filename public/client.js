@@ -1,4 +1,4 @@
-// client.js — runs in the browser, talks to the weather.js backend (/api/weather)
+// client.js — runs in the browser, served by weather.js itself (same origin now)
 
 const cityInput = document.getElementById("city-input");
 const getWeatherBtn = document.getElementById("get-weather-btn");
@@ -7,8 +7,6 @@ const cityNameEl = document.getElementById("city-name");
 const temperatureEl = document.getElementById("temperature");
 const descriptionEl = document.getElementById("description");
 const errorMessageEl = document.getElementById("error-message");
-
-const API_BASE = "http://127.0.0.1:3000";
 
 let isLoading = false;
 
@@ -31,7 +29,7 @@ async function getWeather() {
 
   try {
     const res = await fetch(
-      `${API_BASE}/api/weather?city=${encodeURIComponent(city)}&units=metric`,
+      `/api/weather?city=${encodeURIComponent(city)}&units=metric`,
     );
     const data = await res.json();
 
