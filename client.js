@@ -8,10 +8,13 @@ const temperatureEl = document.getElementById("temperature");
 const descriptionEl = document.getElementById("description");
 const errorMessageEl = document.getElementById("error-message");
 
-// Backend (weather.js) runs on port 3000; frontend is served separately (e.g. Live Server on 5501).
 const API_BASE = "http://127.0.0.1:3000";
 
+let isLoading = false;
+
 async function getWeather() {
+  if (isLoading) return;
+
   const city = cityInput.value.trim();
 
   weatherInfo.classList.add("hidden");
@@ -22,6 +25,9 @@ async function getWeather() {
     errorMessageEl.classList.remove("hidden");
     return;
   }
+
+  isLoading = true;
+  getWeatherBtn.disabled = true;
 
   try {
     const res = await fetch(
@@ -35,12 +41,15 @@ async function getWeather() {
 
     cityNameEl.textContent = data.city;
     temperatureEl.textContent = `Temperature: ${data.temp}`;
-    descriptionEl.textContent = `Local time: ${data["local-time"]} (${data.timezone})`;
+    descriptionEl.textContent = `${data.description} — Local time: ${data["local-time"]} (${data.timezone})`;
 
     weatherInfo.classList.remove("hidden");
   } catch (err) {
     errorMessageEl.textContent = err.message || "City not found. Please try again.";
     errorMessageEl.classList.remove("hidden");
+  } finally {
+    isLoading = false;
+    getWeatherBtn.disabled = false;
   }
 }
 
