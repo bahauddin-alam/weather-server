@@ -3,10 +3,15 @@ const path = require("path");
 const { DateTime } = require("luxon");
 const fastify = require("fastify")({ logger: true });
 
-fastify.register(require("@fastify/cors"), { origin: true });
-fastify.register(require("@fastify/static"), {
-  root: path.join(__dirname, "public"),
+// Allow the frontend (served from a different origin/port, e.g. Live Server on 5501)
+// to read responses from this API (running on port 3000).
+fastify.register(require("@fastify/cors"), {
+  origin: true, // reflects the request's Origin header — fine for local dev
 });
+
+// Env validation
+// Paste your own OpenWeather API key into a .env file as OPENWEATHER_API_KEY=xxxx
+// (see .env.example). Never hardcode the key here — .env is gitignored.
 
 const apiKey = process.env.OPENWEATHER_API_KEY;
 if (!apiKey) {
@@ -14,7 +19,38 @@ if (!apiKey) {
   process.exit(1);
 }
 
-const port = Number(process.env.PORT) || 3000;
+// Turnstile secret — set TURNSTILE_SECRET in your .env (never hardcode it).
+const turnstileSecret = process.env.TURNSTILE_SECRET;
+if (!turnstileSecret) {
+  console.error("Missing TURNSTILE_SECRET environment variable");
+  process.exit(1);
+}
+
+// Canonical Cloudflare Turnstile siteverify call. Browser -> this backend ->
+// siteverify; the browser never calls Cloudflare directly for verification.
+async function verifyTurnstile(token, remoteIp) {
+  if (!token) return false;
+  let result;
+  try {
+    const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret: turnstileSecret,
+        response: token,
+        remoteip: remoteIp || "",
+      }),
+    });
+    if (!r.ok) return false;
+    result = await r.json();
+  } catch (err) {
+    // Network error or non-JSON body from siteverify — fail closed.
+    return false;
+  }
+  return result.success === true;
+}
+
+const port = process.env.PORT || 3000;
 
 const VALID_UNITS = { metric: "°C", imperial: "°F", standard: "K" };
 const TIME_FORMAT = "EEE, dd MMM yyyy hh:mm:ss a";
@@ -26,6 +62,32 @@ function formatOffset(offsetSeconds) {
   const m = String(Math.floor((abs % 3600) / 60)).padStart(2, "0");
   return `${sign}${h}:${m} UTC`;
 }
+
+// Format a unix (seconds) timestamp as a local clock time for a given UTC offset (seconds)
+function toLocal(unixSeconds, offsetSeconds, fmt = "EEE, dd MMM yyyy hh:mm:ss a") {
+  if (unixSeconds === undefined || unixSeconds === null) return null;
+  return DateTime.fromSeconds(unixSeconds, { zone: "utc" })
+    .plus({ seconds: offsetSeconds })
+    .toFormat(fmt);
+}
+
+// Builds the full response payload: every field OpenWeather returned (spread as-is)
+// plus a handful of derived, display-friendly conveniences.
+function buildPayload(data, units) {
+  const offset = data.timezone ?? 0;
+  return {
+    ...data, // coord, weather[], base, main, visibility, wind, clouds, rain, snow, dt, sys, timezone, id, name, cod — untouched
+    units,
+    unitSymbol: VALID_UNITS[units],
+    utcOffset: formatOffset(offset),
+    localTime: DateTime.utc().plus({ seconds: offset }).toFormat("EEE, dd MMM yyyy hh:mm:ss a"),
+    dtLocal: toLocal(data.dt, offset),
+    sunriseLocal: toLocal(data.sys?.sunrise, offset, "hh:mm:ss a"),
+    sunsetLocal: toLocal(data.sys?.sunset, offset, "hh:mm:ss a"),
+  };
+}
+
+// in-memory cache for returned weather data (60s TTL) so we dont hammer the openweather endpoint for the same city every second if user has gone crazy.
 
 const cache = new Map();
 const CACHE_TTL_MS = 60_000;
@@ -64,12 +126,12 @@ function buildResponse(weatherData, units, showCoords) {
 // Health check
 fastify.get("/health", async () => ({ status: "ok" }));
 
-// Weather API route
-fastify.get("/api/weather", async function (request, reply) {
-  const rawCity = request.query.city;
-  const city = typeof rawCity === "string" ? rawCity.trim() : "";
+// Route 1 - /weather - to fetch the weather from openweather
+// POST (not GET) because the request body carries the Turnstile token.
+fastify.post("/api/weather", async function (request, reply) {
+  const city = request.query.city;
   const units = (request.query.units || "metric").toLowerCase();
-  const showCoords = request.query.coords === "true";
+  const turnstileToken = request.body?.["cf-turnstile-response"];
 
   if (!city) {
     return reply.code(400).send({ error: "city query parameter is required" });
@@ -85,11 +147,21 @@ fastify.get("/api/weather", async function (request, reply) {
     });
   }
 
-  const cacheKey = `${city.toLowerCase()}:${units}`;
+  // Verify the human before doing anything else — gate, don't replace,
+  // the existing logic below stays exactly the same on success.
+  const remoteIp = request.headers["x-forwarded-for"] || request.ip;
+  const verified = await verifyTurnstile(turnstileToken, remoteIp);
+  if (!verified) {
+    return reply.code(403).send({ error: "Verification failed. Please try again." });
+  }
 
-  const cached = getCached(cacheKey);
-  if (cached) {
-    return buildResponse(cached, units, showCoords);
+  const cacheKey = `${city.trim().toLowerCase()}:${units}`;
+
+  // Check cache — raw OpenWeather data is cached; local-time strings are
+  // recomputed fresh on every request even on a cache hit.
+  const cachedData = getCached(cacheKey);
+  if (cachedData) {
+    return buildPayload(cachedData, units);
   }
 
   const url =
@@ -138,18 +210,10 @@ fastify.get("/api/weather", async function (request, reply) {
     return reply.code(502).send({ error: "Unexpected response from weather API" });
   }
 
-  const weatherData = {
-    city: data.name,
-    temp: data.main.temp,
-    description: data.weather?.[0]?.description || "N/A",
-    timezone: data.timezone,
-    lat: data.coord.lat,
-    lon: data.coord.lon,
-  };
+  // Cache the raw OpenWeather response (everything, untouched)
+  setCache(cacheKey, data);
 
-  setCache(cacheKey, weatherData);
-
-  return buildResponse(weatherData, units, showCoords);
+  return buildPayload(data, units);
 });
 
 // Graceful shutdown

@@ -1,74 +1,101 @@
-/* styles.css */
+/* styles.css — hand-written CSS that sits alongside Tailwind's utility classes.
+   Tailwind handles layout/spacing/type; this file handles the glass effect,
+   the compass, and a few things Tailwind's core utilities don't cover. */
+
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: Arial, sans-serif;
-    background-color: #121212;
-    color: #FFFFFF;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+  background-color: #0b1220;
 }
 
-.container {
-    background-color: #1E1E1E;
-    padding: 20px;
-    border-radius: 10px;
-    width: 400px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    text-align: center;
+::selection {
+  background: rgba(94, 234, 212, 0.3);
 }
 
-h1 {
-    margin-bottom: 20px;
-    font-size: 24px;
+/* Thin, dark scrollbar so it doesn't fight the glass aesthetic */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(241, 245, 249, 0.15);
+  border-radius: 999px;
 }
 
-.input-container {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
+/* --- Glassmorphism core --- */
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-input[type="text"] {
-    width: 70%;
-    padding: 10px;
-    background-color: #333333;
-    border: none;
-    border-radius: 5px;
-    color: #FFF;
-    outline: none;
+.glass-strong {
+  background: rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-button {
-    width: 25%;
-    padding: 10px;
-    background-color: #ea6200;
-    border: none;
-    border-radius: 5px;
-    color: #FFF;
-    cursor: pointer;
-    transition: background-color 0.3s;
+/* --- Stat cards inside the grid --- */
+.stat-card {
+  border-radius: 1.25rem;
+  padding: 1rem;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.09);
+}
+.stat-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(241, 245, 249, 0.45);
+}
+.stat-value {
+  margin-top: 0.25rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+.stat-unit {
+  margin-left: 0.15rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: rgba(241, 245, 249, 0.4);
 }
 
-button:hover {
-    background-color: #cd5907;
+/* --- Unit toggle buttons --- */
+.unit-btn {
+  color: rgba(241, 245, 249, 0.5);
+}
+.unit-btn[aria-pressed="true"] {
+  background: rgba(255, 180, 84, 0.18);
+  color: #ffb454;
 }
 
-#weather-info {
-    margin-top: 20px;
+/* --- Raw JSON block --- */
+#raw-json {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.hidden {
-    display: none;
-}
-
-#error-message {
-    color: #FF5722;
-    margin-top: 20px;
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
