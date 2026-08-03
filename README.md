@@ -1,117 +1,73 @@
-# Weather Server
-A simple Node.js API that returns the current temperature and local time for a city using the OpenWeather API.
+# Weather Station
 
-## Tech Stack
-* **Node.js**
-* **Fastify** – web framework
-* **Luxon** – date and time formatting
-* **dotenv** – environment variable management
-* **OpenWeather API** – weather data source
-
-## Features
-* Get weather by city name
-* Returns the current local time of the city
-* Returns the UTC timezone offset of the city
-* Optional coordinates (latitude & longitude) in the response
-* Unit system selection (metric, imperial, standard)
-* 60-second in-memory cache to avoid repeated API calls per city + unit combination
-* Health check endpoint
+A Fastify weather API and browser dashboard backed by OpenWeather and Cloudflare Turnstile.
 
 ## Requirements
-* Node.js 18+
-* OpenWeather API key
+
+- Node.js 18 or newer
+- An OpenWeather API key
+- A Cloudflare Turnstile site key and secret configured for the deployed origins
 
 ## Setup
-1. Clone the repository
-```
-git clone <repo-url>
-cd <repo-folder>
-```
-2. Install dependencies
-```
+
+```sh
 npm install
-```
-3. Create a `.env` file
-```
-OPENWEATHER_API_KEY=your_api_key_here
-```
-You can get a free API key from https://openweathermap.org/api
-
-## Run the server
-```
-node weather.js
-```
-The server will start on:
-```
-http://localhost:3000
+cp .env.example .env
 ```
 
-## API Endpoints
+Set the values in `.env`:
 
-### Health Check
+| Variable | Purpose |
+| --- | --- |
+| `OPENWEATHER_API_KEY` | Server-only OpenWeather credential |
+| `TURNSTILE_SECRET` | Server-only Turnstile verification secret |
+| `PORT` | Listening port, default `3000` |
+| `CORS_ORIGIN` | Comma-separated allowed browser origins |
+
+The public Turnstile site key belongs in `public/client.js`. It is safe to expose; the secret must remain in `.env`.
+
+## Run
+
+```sh
+npm start
 ```
-GET /health
+
+The dashboard is served at `http://localhost:3000`. For separate local frontend hosting, set `CORS_ORIGIN` to that frontend origin and use the configured local API base in the browser.
+
+## Tailwind
+
+Tailwind is compiled before deployment; it is not loaded as a browser JIT compiler.
+
+```sh
+npm run build:css
+npm run watch:css
 ```
-Response
+
+The input is `public/tailwind-input.css`, the scanned templates are `public/**/*.html` and `public/**/*.js`, and the generated file is `public/tailwind-output.css`.
+
+## API
+
+### `GET /health`
+
+Returns `{ "status": "ok" }`.
+
+### `POST /api/weather?city=Delhi&units=metric`
+
+The request body must contain a successful Turnstile token:
+
 ```json
-{
-  "status": "ok"
-}
+{ "cf-turnstile-response": "token-from-cloudflare" }
 ```
 
-### Get Weather
-```
-GET /api/weather?city=<city-name>&units=<unit>&coords=<true|false>
+`units` accepts `metric`, `imperial`, or `standard`; it defaults to `metric`. The endpoint verifies Turnstile server-side before checking the cache or calling OpenWeather. Successful weather responses retain the provider data and add local-time/unit fields. Weather data is cached in memory for 60 seconds per city and unit.
+
+## Verification
+
+```sh
+npm run build:css
+npm test
+node --check weather.js
+node --check public/client.js
 ```
 
-#### Query Parameters
-| Parameter | Required | Default | Description |
-|-----------|----------|---------|-------------|
-| `city` | Yes | — | Name of the city |
-| `units` | No | `metric` | `metric` (°C), `imperial` (°F), `standard` (K) |
-| `coords` | No | `false` | Pass `true` to include latitude & longitude |
-
-#### Examples
-
-Basic request
-```
-GET /api/weather?city=Delhi
-```
-```json
-{
-  "city": "Delhi",
-  "temp": "37.05 °C",
-  "timezone": "+05:30 UTC",
-  "local-time": "Fri, 18 Apr 2026 01:58 PM"
-}
-```
-
-With imperial units
-```
-GET /api/weather?city=Delhi&units=imperial
-```
-```json
-{
-  "city": "Delhi",
-  "temp": "98.69 °F",
-  "timezone": "+05:30 UTC",
-  "local-time": "Fri, 18 Apr 2026 01:58 PM"
-}
-```
-
-With coordinates
-```
-GET /api/weather?city=Delhi&units=metric&coords=true
-```
-```json
-{
-  "city": "Delhi",
-  "temp": "37.05 °C",
-  "timezone": "+05:30 UTC",
-  "local-time": "Fri, 18 Apr 2026 01:58 PM",
-  "coordinates": {
-    "lat": 28.6519,
-    "lon": 77.2315
-  }
-}
-```
+`npm audit` requires registry access and should be run in CI or another network-enabled environment.

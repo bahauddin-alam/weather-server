@@ -20,6 +20,7 @@ const TURNSTILE_SITEKEY = "0x4AAAAAAEEpoh_uRktETibG";
 const els = {
   form: document.getElementById("search-form"),
   input: document.getElementById("city-input"),
+  submit: document.getElementById("get-weather-btn"),
   unitBtns: document.querySelectorAll(".unit-btn"),
 
   turnstileChecking: document.getElementById("turnstile-checking"),
@@ -105,6 +106,8 @@ let state = {
   units: localStorage.getItem("weather:units") || "metric",
   lastCity: localStorage.getItem("weather:lastCity") || "",
 };
+let requestInFlight = false;
+let turnstileReady;
 
 function compassDirection(deg) {
   const index = Math.round(deg / 22.5) % 16;
@@ -251,17 +254,26 @@ function hideTurnstileUi() {
   els.turnstileContainer.classList.remove("flex");
 }
 
-// Runs an invisible Turnstile check and resolves with a token.
-// The spinner ("Checking you're human…") is shown the whole time this is
-// in flight. The actual widget/card only becomes visible if Turnstile
-// itself decides it needs an interactive challenge, or if it errors out —
-// exactly the cases where a token can't be produced silently.
+// Wait for the async Turnstile script before rendering the managed widget.
+function waitForTurnstile() {
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+  if (!turnstileReady) {
+    turnstileReady = new Promise((resolve, reject) => {
+      const started = Date.now();
+      const poll = () => {
+        if (window.turnstile) return resolve(window.turnstile);
+        if (Date.now() - started >= 10000) return reject(new Error("Verification is still loading. Please try again."));
+        window.setTimeout(poll, 100);
+      };
+      poll();
+    });
+  }
+  return turnstileReady;
+}
+
+// Execute managed mode silently; show the widget only for a real challenge.
 function verifyHuman() {
-  return new Promise((resolve, reject) => {
-    if (!window.turnstile) {
-      reject(new Error("Verification is still loading. Please try again in a moment."));
-      return;
-    }
+  return waitForTurnstile().then((turnstileApi) => new Promise((resolve, reject) => {
 
     let settled = false;
     const settleOk = (token) => {
@@ -280,37 +292,39 @@ function verifyHuman() {
 
     showTurnstileChecking();
 
-    // Fresh widget each time — avoids stale/expired-token edge cases.
-    if (turnstileWidgetId !== null) {
-      turnstile.remove(turnstileWidgetId);
-      turnstileWidgetId = null;
-    }
-
-    turnstileWidgetId = turnstile.render(els.turnstileContainer, {
+    if (turnstileWidgetId === null) turnstileWidgetId = turnstileApi.render(els.turnstileContainer, {
       sitekey: TURNSTILE_SITEKEY,
       theme: "dark",
-      // 'managed' (default) still shows nothing for most visitors and only
-      // paints a checkbox/puzzle when Cloudflare flags the session — which
-      // is precisely the "only show it when it doesn't just pass" behavior.
+      appearance: "interaction-only",
+      execution: "execute",
       callback: (token) => settleOk(token),
       "error-callback": () => settleFail("Verification failed. Please try again."),
       "timeout-callback": () => settleFail("Verification timed out. Please try again."),
       "expired-callback": () => settleFail("Verification expired. Please try again."),
-      // Turnstile decided the silent check isn't enough and is about to show
-      // a checkbox/puzzle — this is the one legitimate case where the person
-      // needs to see the widget before we have a token at all.
       "before-interactive-callback": () => showTurnstileWidget(),
-      "after-interactive-callback": () => showTurnstileChecking(),
     });
-  });
+    turnstileApi.execute(turnstileWidgetId);
+  }));
+}
+
+// Lock the form for verification and the complete backend request.
+function setRequestBusy(busy) {
+  requestInFlight = busy;
+  els.submit.disabled = busy;
+  els.submit.setAttribute("aria-busy", String(busy));
+  els.input.disabled = busy;
+  els.unitBtns.forEach((button) => { button.disabled = busy; });
 }
 
 async function getWeather(city) {
+  if (requestInFlight) return;
   if (!city) {
     els.errorMessage.textContent = "Please enter a city name.";
     showState("error");
     return;
   }
+
+  setRequestBusy(true);
 
   // Clear any previous error/dashboard so the form area is calm while we
   // verify — the small "Checking you're human…" row is the only indicator
@@ -323,6 +337,7 @@ async function getWeather(city) {
   } catch (err) {
     els.errorMessage.textContent = err.message;
     showState("error");
+    setRequestBusy(false);
     return;
   }
 
@@ -360,6 +375,7 @@ async function getWeather(city) {
       turnstileWidgetId = null;
     }
     hideTurnstileUi();
+    setRequestBusy(false);
   }
 }
 
@@ -386,6 +402,7 @@ els.unitBtns.forEach((btn) => {
 // auto-fetch on load: Turnstile can't be solved before the page has
 // rendered, so a real search always needs the person to submit the form.
 setUnitButtonsActive();
+setRequestBusy(false);
 if (state.lastCity) {
   els.input.value = state.lastCity;
 }

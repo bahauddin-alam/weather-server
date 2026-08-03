@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build:css": "tailwindcss -i ./public/tailwind-input.css -o ./public/tailwind-output.css --minify",
-    "watch:css": "tailwindcss -i ./public/tailwind-input.css -o ./public/tailwind-output.css --watch"
+    "start": "node weather.js",
+    "test": "node --test",
+    "build:css": "tailwindcss -c ./tailwind.config.js -i ./public/tailwind-input.css -o ./public/tailwind-output.css --minify",
+    "watch:css": "tailwindcss -c ./tailwind.config.js -i ./public/tailwind-input.css -o ./public/tailwind-output.css --watch"
   },
   "keywords": [],
   "author": "",
@@ -17,8 +18,7 @@
     "@fastify/static": "^10.1.2",
     "dotenv": "^17.4.2",
     "fastify": "^5.8.5",
-    "luxon": "^3.7.2",
-    "node-fetch": "^3.3.2"
+    "luxon": "^3.7.2"
   },
   "devDependencies": {
     "autoprefixer": "^10.5.4",

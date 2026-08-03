@@ -2,11 +2,20 @@ require("dotenv").config();
 const path = require("path");
 const { DateTime } = require("luxon");
 const fastify = require("fastify")({ logger: true });
+const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:5501";
 
 // Allow the frontend (served from a different origin/port, e.g. Live Server on 5501)
 // to read responses from this API (running on port 3000).
 fastify.register(require("@fastify/cors"), {
-  origin: true, // reflects the request's Origin header — fine for local dev
+  origin: corsOrigin.split(",").map((origin) => origin.trim()).filter(Boolean),
+  methods: ["GET", "POST", "OPTIONS"],
+});
+
+// Add baseline browser security headers to every response.
+fastify.addHook("onSend", async (_request, reply) => {
+  reply.header("X-Content-Type-Options", "nosniff");
+  reply.header("X-Frame-Options", "DENY");
+  reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
 });
 
 // Env validation
@@ -50,10 +59,13 @@ async function verifyTurnstile(token, remoteIp) {
   return result.success === true;
 }
 
-const port = process.env.PORT || 3000;
+const port = Number.parseInt(process.env.PORT || "3000", 10);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  console.error("PORT must be an integer between 1 and 65535");
+  process.exit(1);
+}
 
 const VALID_UNITS = { metric: "°C", imperial: "°F", standard: "K" };
-const TIME_FORMAT = "EEE, dd MMM yyyy hh:mm:ss a";
 
 function formatOffset(offsetSeconds) {
   const sign = offsetSeconds >= 0 ? "+" : "-";
@@ -106,31 +118,16 @@ function setCache(key, data) {
   cache.set(key, { data, ts: Date.now() });
 }
 
-function buildResponse(weatherData, units, showCoords) {
-  const localTime = DateTime.utc()
-    .plus({ seconds: weatherData.timezone })
-    .toFormat(TIME_FORMAT);
-
-  return {
-    city: weatherData.city,
-    temp: `${weatherData.temp} ${VALID_UNITS[units]}`,
-    description: weatherData.description,
-    timezone: formatOffset(weatherData.timezone),
-    "local-time": localTime,
-    ...(showCoords && {
-      coordinates: { lat: weatherData.lat, lon: weatherData.lon },
-    }),
-  };
-}
-
 // Health check
 fastify.get("/health", async () => ({ status: "ok" }));
 
 // Route 1 - /weather - to fetch the weather from openweather
 // POST (not GET) because the request body carries the Turnstile token.
 fastify.post("/api/weather", async function (request, reply) {
-  const city = request.query.city;
-  const units = (request.query.units || "metric").toLowerCase();
+  const city = typeof request.query.city === "string" ? request.query.city.trim() : "";
+  const units = typeof request.query.units === "string"
+    ? request.query.units.toLowerCase()
+    : "metric";
   const turnstileToken = request.body?.["cf-turnstile-response"];
 
   if (!city) {
@@ -149,7 +146,7 @@ fastify.post("/api/weather", async function (request, reply) {
 
   // Verify the human before doing anything else — gate, don't replace,
   // the existing logic below stays exactly the same on success.
-  const remoteIp = request.headers["x-forwarded-for"] || request.ip;
+  const remoteIp = request.ip;
   const verified = await verifyTurnstile(turnstileToken, remoteIp);
   if (!verified) {
     return reply.code(403).send({ error: "Verification failed. Please try again." });
@@ -204,7 +201,13 @@ fastify.post("/api/weather", async function (request, reply) {
     return reply.code(response.status === 404 ? 404 : 502).send({ error: msg });
   }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch (err) {
+    fastify.log.error({ err }, "Weather API returned invalid JSON");
+    return reply.code(502).send({ error: "Weather service returned invalid data" });
+  }
 
   if (!data.main || !data.name) {
     return reply.code(502).send({ error: "Unexpected response from weather API" });
@@ -245,4 +248,8 @@ const start = async () => {
   }
 };
 
-start();
+if (require.main === module) {
+  start();
+}
+
+module.exports = { fastify, buildPayload, verifyTurnstile };
