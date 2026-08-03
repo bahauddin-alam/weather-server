@@ -5,17 +5,15 @@
 // calls our own backend. That's the correct place to paste your own key —
 // see .env.example — never put it here in client-side code.
 
-// Fastify backend; frontend is served separately (e.g. Live Server on 5501 in dev).
-//
-// IMPORTANT: this must point at wherever weather.js is actually deployed and
-// reachable from the *visitor's* browser — not at 127.0.0.1, which only ever
-// resolves to the visitor's own machine. Update the production URL below to
-// match your real backend (e.g. https://api.weather.bahauddin.in or wherever
-// you deployed the Fastify server).
+// Fastify backend; in dev it runs separately (frontend on Live Server 5501,
+// backend on 127.0.0.1:3000). In production, nginx proxies /api/ on this same
+// domain straight through to the backend (see /etc/nginx/sites-available/
+// weather-app), so the frontend just calls same-origin "/api/..." — no
+// separate subdomain, DNS, or CORS needed.
 const API_BASE =
   location.hostname === "localhost" || location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:3000"
-    : "https://api.weather.bahauddin.in"; // <-- replace with your real deployed backend URL
+    : ""; // same origin — nginx handles routing /api/ to the backend
 
 const els = {
   form: document.getElementById("search-form"),
