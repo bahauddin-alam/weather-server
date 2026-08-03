@@ -228,7 +228,16 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 // Start server
 const start = async () => {
   try {
-    await fastify.listen({ port, host: "0.0.0.0" });
+    await fastify.register(require("@fastify/static"), {
+      root: path.join(__dirname, "public"),
+      prefix: "/",
+    });
+
+    await fastify.listen({
+      port,
+      host: "0.0.0.0",
+    });
+
     fastify.log.info(`Server running on port ${port}`);
   } catch (err) {
     fastify.log.error(err);
