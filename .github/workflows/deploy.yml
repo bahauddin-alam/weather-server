@@ -24,6 +24,7 @@ jobs:
       - name: Deploy
         env:
           OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} <<EOF
           set -e
@@ -35,9 +36,14 @@ jobs:
 
           npm ci --omit=dev
 
+          
           touch .env
-          grep -v '^OPENWEATHER_API_KEY=' .env > .env.tmp || true
+
+          grep -Ev '^(OPENWEATHER_API_KEY|TURNSTILE_SECRET)=' .env > .env.tmp || true
+
           echo "OPENWEATHER_API_KEY=$OPENWEATHER_API_KEY" >> .env.tmp
+          echo "TURNSTILE_SECRET=$TURNSTILE_SECRET" >> .env.tmp
+
           mv .env.tmp .env
 
           pm2 restart weather-api
