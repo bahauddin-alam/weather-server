@@ -15,10 +15,15 @@ const API_BASE =
     ? "http://127.0.0.1:3000"
     : ""; // same origin — nginx handles routing /api/ to the backend
 
+const TURNSTILE_SITEKEY = "0x4AAAAAAEEpoh_uRktETibG";
+
 const els = {
   form: document.getElementById("search-form"),
   input: document.getElementById("city-input"),
   unitBtns: document.querySelectorAll(".unit-btn"),
+
+  turnstileChecking: document.getElementById("turnstile-checking"),
+  turnstileContainer: document.getElementById("turnstile-container"),
 
   loading: document.getElementById("loading-state"),
   error: document.getElementById("error-banner"),
@@ -223,6 +228,83 @@ function render(data) {
   els.rawJson.textContent = JSON.stringify(data, null, 2);
 }
 
+let turnstileWidgetId = null;
+
+function showTurnstileChecking() {
+  els.turnstileContainer.classList.add("hidden");
+  els.turnstileContainer.classList.remove("flex");
+  els.turnstileChecking.classList.remove("hidden");
+  els.turnstileChecking.classList.add("flex");
+}
+
+function showTurnstileWidget() {
+  els.turnstileChecking.classList.add("hidden");
+  els.turnstileChecking.classList.remove("flex");
+  els.turnstileContainer.classList.remove("hidden");
+  els.turnstileContainer.classList.add("flex");
+}
+
+function hideTurnstileUi() {
+  els.turnstileChecking.classList.add("hidden");
+  els.turnstileChecking.classList.remove("flex");
+  els.turnstileContainer.classList.add("hidden");
+  els.turnstileContainer.classList.remove("flex");
+}
+
+// Runs an invisible Turnstile check and resolves with a token.
+// The spinner ("Checking you're human…") is shown the whole time this is
+// in flight. The actual widget/card only becomes visible if Turnstile
+// itself decides it needs an interactive challenge, or if it errors out —
+// exactly the cases where a token can't be produced silently.
+function verifyHuman() {
+  return new Promise((resolve, reject) => {
+    if (!window.turnstile) {
+      reject(new Error("Verification is still loading. Please try again in a moment."));
+      return;
+    }
+
+    let settled = false;
+    const settleOk = (token) => {
+      if (settled) return;
+      settled = true;
+      hideTurnstileUi();
+      resolve(token);
+    };
+    const settleFail = (message) => {
+      if (settled) return;
+      settled = true;
+      showTurnstileWidget();
+      reject(new Error(message));
+      return true; // tell Turnstile we handled the error ourselves
+    };
+
+    showTurnstileChecking();
+
+    // Fresh widget each time — avoids stale/expired-token edge cases.
+    if (turnstileWidgetId !== null) {
+      turnstile.remove(turnstileWidgetId);
+      turnstileWidgetId = null;
+    }
+
+    turnstileWidgetId = turnstile.render(els.turnstileContainer, {
+      sitekey: TURNSTILE_SITEKEY,
+      theme: "dark",
+      // 'managed' (default) still shows nothing for most visitors and only
+      // paints a checkbox/puzzle when Cloudflare flags the session — which
+      // is precisely the "only show it when it doesn't just pass" behavior.
+      callback: (token) => settleOk(token),
+      "error-callback": () => settleFail("Verification failed. Please try again."),
+      "timeout-callback": () => settleFail("Verification timed out. Please try again."),
+      "expired-callback": () => settleFail("Verification expired. Please try again."),
+      // Turnstile decided the silent check isn't enough and is about to show
+      // a checkbox/puzzle — this is the one legitimate case where the person
+      // needs to see the widget before we have a token at all.
+      "before-interactive-callback": () => showTurnstileWidget(),
+      "after-interactive-callback": () => showTurnstileChecking(),
+    });
+  });
+}
+
 async function getWeather(city) {
   if (!city) {
     els.errorMessage.textContent = "Please enter a city name.";
@@ -230,10 +312,16 @@ async function getWeather(city) {
     return;
   }
 
-  // Turnstile tokens are single-use — grab whatever's currently rendered.
-  const turnstileToken = window.turnstile?.getResponse();
-  if (!turnstileToken) {
-    els.errorMessage.textContent = "Please complete the verification check.";
+  // Clear any previous error/dashboard so the form area is calm while we
+  // verify — the small "Checking you're human…" row is the only indicator
+  // at this stage; the big spinner comes after, once we actually have a token.
+  showState("empty");
+
+  let turnstileToken;
+  try {
+    turnstileToken = await verifyHuman();
+  } catch (err) {
+    els.errorMessage.textContent = err.message;
     showState("error");
     return;
   }
@@ -264,10 +352,14 @@ async function getWeather(city) {
     els.errorMessage.textContent = err.message || "City not found. Please try again.";
     showState("error");
   } finally {
-    // Token is redeemed after one siteverify call either way — always
-    // reset so the next attempt gets a fresh token instead of being
-    // rejected as timeout-or-duplicate.
-    window.turnstile?.reset();
+    // Token is single-use either way — tear the widget down so the next
+    // submit renders a completely fresh one instead of reusing/resetting
+    // a spent one.
+    if (turnstileWidgetId !== null) {
+      turnstile.remove(turnstileWidgetId);
+      turnstileWidgetId = null;
+    }
+    hideTurnstileUi();
   }
 }
 
@@ -281,10 +373,10 @@ els.unitBtns.forEach((btn) => {
     state.units = btn.dataset.unit;
     localStorage.setItem("weather:units", state.units);
     setUnitButtonsActive();
-    // Switching units re-queries the backend, which means another
-    // Turnstile check. Only auto-refetch if a token is already sitting
-    // there solved; otherwise just wait for the person to hit submit.
-    if (state.lastCity && window.turnstile?.getResponse()) {
+    // Switching units re-queries the backend, which means another Turnstile
+    // check — getWeather() triggers a fresh invisible one on its own, same
+    // as a normal submit.
+    if (state.lastCity) {
       getWeather(state.lastCity);
     }
   });

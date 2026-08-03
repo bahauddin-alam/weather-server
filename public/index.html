@@ -12,8 +12,10 @@
       rel="stylesheet"
     />
 
-    <!-- Cloudflare Turnstile -->
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <!-- Cloudflare Turnstile — explicit render: we call turnstile.render() ourselves
+         (in client.js) only when the form is submitted, instead of letting it
+         auto-render a widget the moment the page loads. -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 
     <!-- Tailwind (Play CDN — no build step needed) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -104,14 +106,18 @@
             Get reading
           </button>
         </div>
-        <div class="flex justify-center border-t border-white/10 pt-3">
-          <div
-            class="cf-turnstile"
-            data-sitekey="0x4AAAAAAEEpoh_uRktETibG"
-            data-action="turnstile-spin-v2"
-            data-theme="dark"
-          ></div>
+        <!-- Turnstile checking state: shown only while we're waiting on a token.
+             Hidden by default — appears the instant "Get reading" is clicked. -->
+        <div id="turnstile-checking" class="hidden justify-center items-center gap-2 border-t border-white/10 pt-3 text-xs text-frost/50">
+          <div class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-frost/20 border-t-aurora"></div>
+          <span>Checking you're human…</span>
         </div>
+
+        <!-- Turnstile widget mount point. No cf-turnstile class — we render into
+             this explicitly via JS. Stays hidden/collapsed unless Turnstile needs
+             an interactive challenge (i.e. the invisible check failed/errored),
+             at which point client.js reveals it so the person can complete it. -->
+        <div id="turnstile-container" class="hidden justify-center border-t border-white/10 pt-3"></div>
       </form>
 
       <!-- Mobile unit toggle -->
