@@ -24,16 +24,16 @@
   <body class="font-body bg-ink text-frost min-h-screen overflow-x-hidden">
     <!-- Ambient background: blurred drifting color fields the glass panels refract -->
     <div class="fixed inset-0 -z-10 overflow-hidden bg-ink" aria-hidden="true">
-      <div class="absolute -top-32 -left-24 h-[32rem] w-[32rem] rounded-full bg-violet/50 blur-3xl animate-drift"></div>
-      <div class="absolute top-1/3 -right-24 h-[28rem] w-[28rem] rounded-full bg-twilight blur-3xl animate-drift2"></div>
-      <div id="accent-blob" class="absolute bottom-0 left-1/4 h-[26rem] w-[26rem] rounded-full bg-gold/30 blur-3xl animate-drift transition-colors duration-1000"></div>
-      <div class="absolute inset-0 bg-ink/40"></div>
+      <div class="absolute -top-32 -left-24 h-[32rem] w-[32rem] rounded-full bg-white/[0.02] blur-3xl animate-drift"></div>
+      <div class="absolute top-1/3 -right-24 h-[28rem] w-[28rem] rounded-full bg-white/[0.02] blur-3xl animate-drift2"></div>
+      <div id="accent-blob" class="absolute bottom-0 left-1/4 h-[26rem] w-[26rem] rounded-full bg-white/[0.03] blur-3xl animate-drift transition-colors duration-1000"></div>
+      <div class="absolute inset-0 bg-black/40"></div>
     </div>
 
     <main class="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-10 sm:px-8">
       <!-- Header -->
       <header class="mb-8 flex flex-col items-center text-center">
-        <p class="font-mono text-xs uppercase tracking-[0.35em] text-aurora/80">Weather Station</p>
+        <p class="font-mono text-xs uppercase tracking-[0.35em] text-frost/60">Weather Station</p>
         <h1 class="mt-2 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
           Every reading, one glance
         </h1>
@@ -60,7 +60,7 @@
           <button
             type="submit"
             id="get-weather-btn"
-            class="shrink-0 rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-gold/90 active:scale-95"
+            class="shrink-0 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-100 active:scale-95"
           >
             Get reading
           </button>
@@ -68,7 +68,7 @@
         <!-- Turnstile checking state: shown only while we're waiting on a token.
              Hidden by default — appears the instant "Get reading" is clicked. -->
         <div id="turnstile-checking" class="hidden justify-center items-center gap-2 border-t border-white/10 pt-3 text-xs text-frost/50">
-          <div class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-frost/20 border-t-aurora"></div>
+          <div class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-frost/20 border-t-white"></div>
           <span>Checking you're human…</span>
         </div>
 
@@ -88,12 +88,12 @@
 
       <!-- Status: loading -->
       <div id="loading-state" class="hidden mt-10 flex flex-col items-center gap-3 text-frost/50">
-        <div class="h-8 w-8 animate-spin rounded-full border-2 border-frost/20 border-t-aurora"></div>
+        <div class="h-8 w-8 animate-spin rounded-full border-2 border-frost/20 border-t-white"></div>
         <p class="font-mono text-xs uppercase tracking-widest">Pulling data…</p>
       </div>
 
       <!-- Status: error -->
-      <div id="error-banner" class="hidden mt-8 mx-auto w-full max-w-xl animate-rise rounded-2xl border border-red-400/30 bg-red-500/10 px-5 py-4 text-center text-sm text-red-200">
+      <div id="error-banner" class="hidden mt-8 mx-auto w-full max-w-xl animate-rise rounded-2xl border border-red-400/20 bg-red-500/5 px-5 py-4 text-center text-sm text-red-200">
         <span id="error-message"></span>
       </div>
 
@@ -109,7 +109,7 @@
         <section class="glass-strong rounded-3xl p-6 sm:p-8">
           <div class="flex flex-col items-center gap-6 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-4">
-              <img id="weather-icon" alt="" class="h-20 w-20 drop-shadow-[0_0_20px_rgba(255,180,84,0.35)] sm:h-24 sm:w-24" />
+              <img id="weather-icon" alt="" class="h-20 w-20 drop-shadow-[0_0_12px_rgba(255,255,255,0.08)] sm:h-24 sm:w-24" />
               <div>
                 <h2 id="city-name" class="font-display text-2xl font-semibold sm:text-3xl"></h2>
                 <p class="text-sm text-frost/60">
@@ -117,8 +117,10 @@
                   <span id="country-name"></span>
                   · <span id="stat-coords" class="font-mono"></span>
                 </p>
-                <p id="condition-desc" class="mt-1 font-mono text-xs uppercase tracking-widest text-aurora/80"></p>
-              </div>
+                <p 
+                  id="condition-desc"
+                  class="mt-1 font-mono text-xs uppercase tracking-widest text-frost/60">
+                </p>
             </div>
 
             <div class="text-center sm:text-right">
@@ -145,17 +147,17 @@
           <div class="glass rounded-3xl p-6 flex flex-col items-center justify-center">
             <p class="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-frost/40">Wind</p>
             <svg viewBox="0 0 200 200" class="h-44 w-44">
-              <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(241,245,249,0.12)" stroke-width="1" />
-              <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(241,245,249,0.08)" stroke-width="1" />
-              <g class="font-mono" fill="rgba(241,245,249,0.45)" font-size="11" text-anchor="middle">
+              <circle cx="100" cy="100" r="92" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+              <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+              <g class="font-mono" fill="rgba(255,255,255,0.35)" font-size="11" text-anchor="middle">
                 <text x="100" y="16">N</text>
                 <text x="184" y="104">E</text>
                 <text x="100" y="192">S</text>
                 <text x="16" y="104">W</text>
               </g>
               <g id="wind-needle" style="transform-origin: 100px 100px; transition: transform 0.6s cubic-bezier(0.34,1.56,0.64,1)">
-                <path d="M100 30 L108 100 L100 90 L92 100 Z" fill="#FFB454" />
-                <circle cx="100" cy="100" r="5" fill="#5EEAD4" />
+                <path d="M100 30 L108 100 L100 90 L92 100 Z" fill="#E4E4E7" />
+                <circle cx="100" cy="100" r="5" fill="#71717A" />
               </g>
             </svg>
             <p class="mt-2 font-display text-2xl">
@@ -216,7 +218,7 @@
           <summary class="cursor-pointer font-mono text-xs uppercase tracking-[0.3em] text-frost/40">
             Raw API response
           </summary>
-          <pre id="raw-json" class="mt-4 max-h-96 overflow-auto rounded-xl bg-black/30 p-4 font-mono text-xs leading-relaxed text-aurora/80"></pre>
+          <pre id="raw-json" class="mt-4 max-h-96 overflow-auto rounded-xl bg-black/30 p-4 font-mono text-xs leading-relaxed text-frost/70"></pre>
         </details>
       </div>
     </main>

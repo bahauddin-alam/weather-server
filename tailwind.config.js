@@ -3,13 +3,13 @@ module.exports = {
   content: ["./public/**/*.html", "./public/**/*.js"],
   theme: {
     extend: {
-      colors: {
-        ink: "#0B1220",
-        twilight: "#1B2A4A",
-        violet: "#4C3A73",
-        gold: "#FFB454",
-        aurora: "#5EEAD4",
-        frost: "#F1F5F9",
+        colors: {
+        ink: "#000000",
+        twilight: "#111111",
+        violet: "#1A1A1A",
+        gold: "#FFFFFF",
+        aurora: "#A1A1AA",
+        frost: "#FAFAFA",
       },
       fontFamily: {
         display: ["'Space Grotesk'", "sans-serif"],

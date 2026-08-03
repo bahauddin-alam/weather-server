@@ -7,7 +7,10 @@
 }
 
 body {
-  background-color: #0b1220;
+  body{
+    background:#000;
+    color:#fafafa;
+}
 }
 
 ::selection {
@@ -29,19 +32,21 @@ body {
 
 /* --- Glassmorphism core --- */
 .glass {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .glass-strong {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(28px) saturate(150%);
   -webkit-backdrop-filter: blur(28px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* --- Stat cards inside the grid --- */
@@ -52,37 +57,37 @@ body {
 }
 .stat-card:hover {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
 }
 .stat-label {
   font-family: "JetBrains Mono", monospace;
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(241, 245, 249, 0.45);
+  color: #71717a;
 }
 .stat-value {
   margin-top: 0.25rem;
   font-family: "Space Grotesk", sans-serif;
   font-size: 1.375rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: #fafafa;
 }
 .stat-unit {
   margin-left: 0.15rem;
   font-family: "JetBrains Mono", monospace;
   font-size: 0.7rem;
   font-weight: 400;
-  color: rgba(241, 245, 249, 0.4);
+  color: #a1a1aa;
 }
 
 /* --- Unit toggle buttons --- */
 .unit-btn {
-  color: rgba(241, 245, 249, 0.5);
+  color: #71717a;
 }
 .unit-btn[aria-pressed="true"] {
-  background: rgba(255, 180, 84, 0.18);
-  color: #ffb454;
+  background: rgba(255, 255, 255, 0.10);
+  color: #ffffff;
 }
 
 /* --- Raw JSON block --- */
