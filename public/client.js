@@ -5,7 +5,17 @@
 // calls our own backend. That's the correct place to paste your own key —
 // see .env.example — never put it here in client-side code.
 
-const API_BASE = "http://127.0.0.1:3000"; // Fastify backend; frontend is served separately (e.g. Live Server on 5501)
+// Fastify backend; frontend is served separately (e.g. Live Server on 5501 in dev).
+//
+// IMPORTANT: this must point at wherever weather.js is actually deployed and
+// reachable from the *visitor's* browser — not at 127.0.0.1, which only ever
+// resolves to the visitor's own machine. Update the production URL below to
+// match your real backend (e.g. https://api.weather.bahauddin.in or wherever
+// you deployed the Fastify server).
+const API_BASE =
+  location.hostname === "localhost" || location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:3000"
+    : "https://api.weather.bahauddin.in"; // <-- replace with your real deployed backend URL
 
 const els = {
   form: document.getElementById("search-form"),
